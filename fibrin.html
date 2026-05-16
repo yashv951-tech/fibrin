@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Fibrin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+
+:root{
+  --bg:#fff;
+  --bg2:#fff8f8;
+  --sf:#fff0f0;
+  --sf2:#fde0e0;
+  --bd:#fdd;
+  --bd2:#fca5a5;
+  --ink:#1a0505;
+  --ink2:#6b2020;
+  --ink3:#b06060;
+  --ink4:#d4a0a0;
+  --red:#dc2626;
+  --red2:#b91c1c;
+  --red-bg:#fff1f1;
+  --red-bd:rgba(220,38,38,.15);
+  --green:#16a34a;
+  --amber:#92400e;
+  --amber-bg:rgba(146,64,14,.08);
+  /* word colors */
+  --c1:#dc2626;--c2:#7c3aed;--c3:#0891b2;--c4:#16a34a;--c5:#d97706;--c6:#be185d;
+  --sp-col:#92400e;
+  --cell:52px;--gap:5px;--r:50%; /* CIRCULAR cells like Strands */
+}
+
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);display:flex;justify-content:center;align-items:flex-start;}
+
+.page{
+  width:100%;max-width:430px;height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:0 1rem;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+.page.no-scroll{overflow:hidden;touch-action:none;}
+
+/* ── SPLASH SCREEN ── */
+.splash{
+  position:fixed;inset:0;background:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1rem;z-index:300;
+  transition:opacity .4s ease;
+}
+.splash.gone{opacity:0;pointer-events:none;}
+.splash-logo{font-size:2.5rem;font-weight:600;letter-spacing:-.04em;color:var(--ink);}
+.splash-logo span{color:var(--red);}
+.splash-tag{font-size:.8rem;color:var(--ink3);}
+.splash-theme-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--ink4);margin-top:.5rem;}
+.splash-theme{font-size:1.4rem;font-weight:600;letter-spacing:-.02em;color:var(--ink);text-align:center;max-width:260px;}
+.splash-btn{
+  margin-top:.5rem;
+  background:var(--red);color:#fff;border:none;
+  font-size:.9rem;font-weight:500;
+  padding:.7rem 2rem;border-radius:999px;
+  cursor:pointer;transition:opacity .15s;
+}
+.splash-btn:hover{opacity:.85;}
+
+/* ── HEADER ── */
+header{
+  width:100%;display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 0 .75rem;border-bottom:1px solid var(--bd);
+  margin-bottom:.75rem;flex-shrink:0;
+}
+.logo{font-size:1.15rem;font-weight:600;letter-spacing:-.04em;}
+.logo-dot{color:var(--red);}
+.hdr-r{text-align:right;}
+.hdr-id{font-family:'JetBrains Mono',monospace;font-size:.55rem;color:var(--ink4);letter-spacing:.08em;text-transform:uppercase;}
+.hdr-date{font-size:.58rem;color:var(--ink4);margin-top:1px;}
+
+/* ── STREAK ── */
+.streak-bar{
+  width:100%;display:flex;align-items:center;gap:.5rem;
+  background:var(--bg2);border:1px solid var(--bd);border-radius:10px;
+  padding:.55rem .8rem;margin-bottom:.7rem;flex-shrink:0;
+}
+.str-fire{font-size:.9rem;line-height:1;}
+.str-n{font-size:.85rem;font-weight:600;letter-spacing:-.02em;color:var(--ink);}
+.str-lbl{font-size:.62rem;color:var(--ink3);}
+.str-gap{flex:1;}
+.pips{display:flex;gap:3px;}
+.pip{width:7px;height:7px;border-radius:50%;background:var(--bd2);transition:background .3s;}
+.pip.done{background:var(--red);}
+.pip.today{background:var(--red);box-shadow:0 0 0 2px rgba(220,38,38,.25);}
+
+/* ── THEME ── */
+.theme-block{
+  width:100%;text-align:center;margin-bottom:.6rem;flex-shrink:0;
+}
+.theme-eyebrow{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.55rem;font-weight:500;color:var(--red);
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;
+}
+.theme-name{
+  font-size:1.2rem;font-weight:600;letter-spacing:-.025em;color:var(--ink);
+  line-height:1.2;
+}
+
+/* ── WORD SLOTS — blank placeholders like Strands ── */
+.slots{
+  width:100%;display:flex;flex-wrap:wrap;gap:5px;
+  justify-content:center;margin-bottom:.6rem;min-height:30px;flex-shrink:0;
+}
+.slot{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.62rem;letter-spacing:.04em;font-weight:500;
+  padding:4px 11px;border-radius:6px;
+  border:1.5px dashed var(--bd2);
+  color:var(--ink4);background:transparent;
+  transition:all .3s;
+  white-space:nowrap;
+}
+.slot.found-slot{
+  border-style:solid;border-color:transparent;
+  color:#fff;
+  animation:slotPop .35s cubic-bezier(.34,1.5,.64,1) both;
+}
+.slot.sp-slot{
+  border-style:solid;border-color:transparent;
+  background:var(--sp-col);color:#fff;
+  animation:slotPop .35s cubic-bezier(.34,1.5,.64,1) both;
+}
+@keyframes slotPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+
+/* ── HINT SYSTEM (earn-a-hint like Strands) ── */
+.hint-section{
+  width:100%;display:flex;align-items:center;gap:.5rem;
+  margin-bottom:.45rem;flex-shrink:0;
+}
+.hint-earn{
+  display:flex;align-items:center;gap:4px;
+  font-size:.6rem;color:var(--ink3);
+}
+.earn-pips{display:flex;gap:3px;}
+.earn-pip{
+  width:7px;height:7px;border-radius:50%;
+  border:1.5px solid var(--bd2);background:transparent;
+  transition:background .2s,border-color .2s;
+}
+.earn-pip.lit{background:var(--amber);border-color:var(--amber);}
+.hint-count{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.58rem;color:var(--ink3);
+}
+.btn-hint{
+  margin-left:auto;
+  font-size:.62rem;font-weight:500;
+  background:transparent;border:1px solid var(--bd2);
+  color:var(--ink2);padding:3px 12px;border-radius:6px;
+  cursor:pointer;transition:all .12s;
+}
+.btn-hint:hover:not(:disabled){border-color:var(--red);color:var(--red);}
+.btn-hint:disabled{opacity:.3;cursor:default;}
+
+/* ── CURRENT WORD ── */
+.cur{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.9rem;font-weight:500;letter-spacing:.15em;
+  color:var(--ink3);min-height:24px;
+  text-transform:uppercase;text-align:center;
+  margin-bottom:.4rem;flex-shrink:0;
+}
+.cur.ok{color:var(--green);}
+.cur.earn{color:var(--amber);}
+.cur.bad{color:var(--red);animation:shake .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+/* ── GRID ── */
+.grid-wrap{
+  width:100%;display:flex;justify-content:center;
+  margin-bottom:.6rem;position:relative;
+  flex-shrink:0;touch-action:none;
+}
+#grid{display:inline-grid;gap:var(--gap);position:relative;}
+
+/* Strands uses CIRCULAR cells */
+.cell{
+  width:var(--cell);height:var(--cell);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;font-weight:500;letter-spacing:.01em;
+  border-radius:var(--r); /* 50% = circle */
+  cursor:pointer;
+  transition:background .08s,color .08s,box-shadow .08s;
+  background:var(--sf);color:var(--ink2);
+  text-transform:uppercase;
+  will-change:background,box-shadow;
+}
+.cell:hover{background:var(--sf2);color:var(--ink);}
+.cell.sel{
+  background:var(--red);color:#fff;
+  box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px var(--red);
+  z-index:2;
+}
+.cell.found{
+  color:#fff;cursor:default;box-shadow:none;
+  animation:cellPop .32s cubic-bezier(.34,1.4,.64,1) both;
+}
+.cell.sp-found{
+  background:var(--sp-col)!important;color:#fff!important;
+  cursor:default;box-shadow:none;
+  animation:cellPop .32s cubic-bezier(.34,1.4,.64,1) both;
+}
+.cell.earn-found{
+  background:var(--amber)!important;color:#fff!important;
+  cursor:default;box-shadow:none;
+  animation:cellPop .32s cubic-bezier(.34,1.4,.64,1) both;
+}
+@keyframes cellPop{
+  0%{transform:scale(.8);opacity:.5}
+  65%{transform:scale(1.06)}
+  100%{transform:scale(1);opacity:1}
+}
+.cell.hinted{animation:hintPulse .7s ease 3;}
+@keyframes hintPulse{
+  0%,100%{box-shadow:none}
+  50%{box-shadow:0 0 0 4px rgba(220,38,38,.35)}
+}
+.cell-blank{width:var(--cell);height:var(--cell);visibility:hidden;pointer-events:none;}
+
+/* SVG drag line */
+#svg-overlay{position:absolute;top:0;left:0;pointer-events:none;z-index:5;overflow:visible;}
+.drag-line{fill:none;stroke:var(--red);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;opacity:.4;}
+
+/* ── STATUS BAR ── */
+.status{
+  width:100%;display:flex;justify-content:space-around;
+  padding:.6rem 0 .3rem;border-top:1px solid var(--bd);flex-shrink:0;
+}
+.st{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.st-n{
+  font-size:1.2rem;font-weight:600;letter-spacing:-.03em;line-height:1;
+  color:var(--ink);
+}
+.st-n.bump{animation:bump .22s ease;}
+@keyframes bump{0%{transform:scale(1)}50%{transform:scale(1.35)}100%{transform:scale(1)}}
+.st-l{font-size:.5rem;color:var(--ink4);letter-spacing:.1em;text-transform:uppercase;}
+
+/* ── NEXT PUZZLE TIMER ── */
+.next-wrap{width:100%;text-align:center;margin-top:.6rem;flex-shrink:0;}
+.next-l{font-size:.52rem;color:var(--ink4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+.next-t{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink3);}
+
+/* ── HOW TO PLAY ── */
+.howto{
+  width:100%;margin:.7rem 0 1.5rem;
+  padding:.65rem .85rem;border-radius:10px;
+  background:var(--bg2);border:1px solid var(--bd);flex-shrink:0;
+}
+.howto-title{font-size:.58rem;font-weight:600;color:var(--ink2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:.3rem;}
+.howto-body{font-size:.7rem;color:var(--ink3);line-height:1.65;}
+.howto-body b{color:var(--red);font-weight:500;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;top:56px;left:50%;
+  transform:translateX(-50%) translateY(-8px);
+  background:var(--ink);color:#fff;
+  font-size:.72rem;font-weight:500;
+  padding:.4rem .9rem;border-radius:8px;
+  opacity:0;pointer-events:none;
+  transition:opacity .18s,transform .18s;
+  z-index:200;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── WIN OVERLAY ── */
+.win-bg{
+  display:none;position:fixed;inset:0;
+  background:rgba(26,5,5,.7);z-index:100;
+  align-items:center;justify-content:center;padding:1rem;
+}
+.win-bg.show{display:flex;}
+
+.win-sheet{
+  background:#fff;border-radius:20px;
+  width:100%;max-width:400px;
+  overflow:hidden;
+  display:flex;flex-direction:column;align-items:stretch;
+  animation:sheetUp .4s cubic-bezier(.34,1.1,.64,1) both;
+  max-height:92vh;overflow-y:auto;
+}
+@keyframes sheetUp{from{transform:scale(.92) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+
+/* Fibrin hero banner */
+.win-hero{
+  background:var(--red);
+  padding:2rem 1.5rem 1.5rem;
+  display:flex;flex-direction:column;align-items:center;gap:.6rem;
+  position:relative;overflow:hidden;
+}
+
+/* Animated fibrin mesh SVG in background */
+.win-hero::before{
+  content:'';
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(135deg,rgba(255,255,255,.07) 1px,transparent 1px),
+    linear-gradient(45deg,rgba(255,255,255,.07) 1px,transparent 1px);
+  background-size:18px 18px;
+  animation:meshMove 4s linear infinite;
+}
+@keyframes meshMove{
+  from{background-position:0 0,0 0;}
+  to{background-position:18px 18px,-18px 18px;}
+}
+
+.win-badge{
+  position:relative;z-index:1;
+  width:56px;height:56px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;line-height:1;
+  box-shadow:0 0 0 4px rgba(255,255,255,.12);
+}
+.win-h{
+  position:relative;z-index:1;
+  font-size:1.35rem;font-weight:600;letter-spacing:-.03em;
+  color:#fff;text-align:center;
+}
+.win-science{
+  position:relative;z-index:1;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(255,255,255,.6);text-align:center;
+}
+
+/* Clot formed message */
+.win-clot{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:8px;padding:.4rem .9rem;
+  font-size:.72rem;color:rgba(255,255,255,.9);
+  font-weight:500;letter-spacing:.02em;
+}
+
+/* Body section */
+.win-body{
+  padding:1.25rem 1.25rem 1.4rem;
+  display:flex;flex-direction:column;align-items:center;gap:1rem;
+}
+
+.win-sub{font-size:.68rem;color:var(--ink3);text-align:center;line-height:1.5;}
+.win-slots{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}
+.win-divider{width:100%;height:1px;background:var(--bd);}
+
+.win-stats{
+  display:flex;gap:0;width:100%;
+  border:1px solid var(--bd);border-radius:12px;overflow:hidden;
+}
+.wst{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;padding:.75rem .5rem;
+  border-right:1px solid var(--bd);
+}
+.wst:last-child{border-right:none;}
+.wst-n{font-size:1.4rem;font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--ink);}
+.wst-l{font-size:.48rem;color:var(--ink4);letter-spacing:.12em;text-transform:uppercase;}
+
+.share-pre{
+  width:100%;background:var(--bg2);border:1px solid var(--bd);
+  border-radius:9px;padding:.7rem .9rem;
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;
+  color:var(--ink2);line-height:1.9;white-space:pre;text-align:center;
+}
+
+.win-btns{display:flex;gap:.5rem;width:100%;}
+.btn-primary{
+  flex:2;font-size:.84rem;font-weight:500;
+  background:var(--red);color:#fff;border:none;
+  padding:.72rem;border-radius:10px;cursor:pointer;
+  transition:opacity .12s,transform .1s;
+}
+.btn-primary:hover{opacity:.85;}
+.btn-primary:active{transform:scale(.97);}
+.btn-secondary{
+  flex:1;font-size:.84rem;background:transparent;
+  color:var(--ink2);border:1px solid var(--bd2);
+  padding:.72rem;border-radius:10px;cursor:pointer;
+  transition:border-color .12s;
+}
+.btn-secondary:hover{border-color:var(--ink3);}
+
+/* ── CONFETTI CANVAS ── */
+#confetti{
+  position:fixed;inset:0;pointer-events:none;z-index:99;
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="splash" id="splash">
+  <div class="splash-logo">Fibrin<span>.</span></div>
+  <div class="splash-tag">Daily medical word puzzle</div>
+  <div class="splash-theme-label">Today's theme</div>
+  <div class="splash-theme" id="splashTheme">—</div>
+  <button class="splash-btn" onclick="dismissSplash()">Play →</button>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<div class="page" id="page">
+
+  <header>
+    <div class="logo">Fibrin<span class="logo-dot">.</span></div>
+    <div class="hdr-r">
+      <div class="hdr-id" id="hdrId">PUZZLE #142</div>
+      <div class="hdr-date" id="hdrDate"></div>
+    </div>
+  </header>
+
+  <div class="streak-bar">
+    <div class="str-fire">🔥</div>
+    <div class="str-n" id="strN">0</div>
+    <div class="str-lbl">day streak</div>
+    <div class="str-gap"></div>
+    <div class="pips" id="pips"></div>
+  </div>
+
+  <div class="theme-block">
+    <div class="theme-eyebrow">Today's theme</div>
+    <div class="theme-name" id="themeName">—</div>
+  </div>
+
+  <!-- Word slots — blank until found -->
+  <div class="slots" id="slots"></div>
+
+  <!-- Hint system: earn hints by finding non-theme words -->
+  <div class="hint-section">
+    <div class="hint-earn">
+      <div class="earn-pips" id="earnPips">
+        <div class="earn-pip"></div>
+        <div class="earn-pip"></div>
+        <div class="earn-pip"></div>
+      </div>
+      <div class="hint-count" id="hintCount">0 hints</div>
+    </div>
+    <button class="btn-hint" id="btnHint" onclick="doHint()" disabled>Use hint</button>
+  </div>
+
+  <div class="cur" id="cur"></div>
+
+  <div class="grid-wrap" id="gridWrap">
+    <div id="grid"></div>
+    <svg id="svg-overlay"></svg>
+  </div>
+
+  <div class="status">
+    <div class="st"><div class="st-n" id="sF">0</div><div class="st-l">Found</div></div>
+    <div class="st"><div class="st-n" id="sT">—</div><div class="st-l">Strands</div></div>
+    <div class="st"><div class="st-n" id="sM">0</div><div class="st-l">Moves</div></div>
+  </div>
+
+  <div class="next-wrap">
+    <div class="next-l">Next puzzle in</div>
+    <div class="next-t" id="nextT">—</div>
+  </div>
+
+  <div class="howto">
+    <div class="howto-title">How to play</div>
+    <div class="howto-body">
+      Drag across touching letters to trace a hidden word. Find all words that fit the theme. The <b>spangram</b> (amber) touches both sides of the grid. Finding non-theme words earns hint credits — every 3 earns 1 hint.
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- WIN -->
+<div class="win-bg" id="winBg">
+  <div class="win-sheet">
+    <div class="win-hero">
+      <div class="win-badge">🩸</div>
+      <div class="win-h">Clot formed.</div>
+      <div class="win-science">Fibrin mesh complete · Haemostasis achieved</div>
+      <div class="win-clot" id="winClot">All strands woven</div>
+    </div>
+    <div class="win-body">
+      <div class="win-sub" id="winSub"></div>
+      <div class="win-slots" id="winSlots"></div>
+      <div class="win-divider"></div>
+      <div class="win-stats">
+        <div class="wst"><div class="wst-n" id="wM">0</div><div class="wst-l">Moves</div></div>
+        <div class="wst"><div class="wst-n" id="wH">0</div><div class="wst-l">Hints used</div></div>
+        <div class="wst"><div class="wst-n" id="wT">—</div><div class="wst-l">Time</div></div>
+      </div>
+      <div class="share-pre" id="sharePre"></div>
+      <div class="win-btns">
+        <button class="btn-primary" onclick="doCopy()">Copy result</button>
+        <button class="btn-secondary" onclick="closeWin()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── VERIFIED PUZZLES ──
+const COLS=6,ROWS=7;
+
+const PZS=[
+  {
+    id:142,theme:"Signs of Infection",
+    sp:"INFLAMMATION",
+    words:["FEVER","CHILLS","MALAISE","TACHYCARDIA"],
+    colors:['--c1','--c2','--c3','--c4'],
+    grid:[
+      ['I','N','F','L','A','M'],
+      ['N','O','I','T','A','M'],
+      ['F','E','V','E','R','C'],
+      ['M','S','L','L','I','H'],
+      ['A','L','A','I','S','E'],
+      ['T','A','C','H','Y','C'],
+      ['J','A','I','D','R','A'],
+    ],
+    paths:{
+      "INFLAMMATION":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],
+      "FEVER":       [[2,0],[2,1],[2,2],[2,3],[2,4]],
+      "CHILLS":      [[2,5],[3,5],[3,4],[3,3],[3,2],[3,1]],
+      "MALAISE":     [[3,0],[4,0],[4,1],[4,2],[4,3],[4,4],[4,5]],
+      "TACHYCARDIA": [[5,0],[5,1],[5,2],[5,3],[5,4],[5,5],[6,5],[6,4],[6,3],[6,2],[6,1]],
+    }
+  },
+  {
+    id:143,theme:"Coagulation",
+    sp:"HAEMOSTASIS",
+    words:["FIBRIN","THROMBIN","PLATELET","EMBOLISM"],
+    colors:['--c1','--c2','--c3','--c4'],
+    grid:[
+      ['H','A','E','M','O','S'],
+      ['F','S','I','S','A','T'],
+      ['I','B','R','I','N','T'],
+      ['I','B','M','O','R','H'],
+      ['N','P','L','A','T','E'],
+      ['M','E','T','E','L','P'],
+      ['B','O','L','I','S','M'],
+    ],
+    paths:{
+      "HAEMOSTASIS":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,5],[1,4],[1,3],[1,2],[1,1]],
+      "FIBRIN":     [[1,0],[2,0],[2,1],[2,2],[2,3],[2,4]],
+      "THROMBIN":   [[2,5],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0],[4,0]],
+      "PLATELET":   [[4,1],[4,2],[4,3],[4,4],[5,4],[5,3],[5,2],[5,1]],
+      "EMBOLISM":   [[5,0],[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[5,5]],
+    }
+  },
+  {
+    id:144,theme:"Heart Failure",
+    sp:"CARDIOMEGALY",
+    words:["DYSPNEA","OEDEMA","FATIGUE","CRACKLES"],
+    colors:['--c1','--c2','--c3','--c4'],
+    grid:[
+      ['C','A','R','D','I','O'],
+      ['Y','L','A','G','E','M'],
+      ['D','Y','S','P','N','E'],
+      ['M','E','D','E','O','A'],
+      ['A','F','A','T','I','G'],
+      ['C','A','R','C','E','U'],
+      ['K','L','E','S','J','H'],
+    ],
+    paths:{
+      "CARDIOMEGALY":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],
+      "DYSPNEA":     [[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[3,5]],
+      "OEDEMA":      [[3,4],[3,3],[3,2],[3,1],[3,0],[4,0]],
+      "FATIGUE":     [[4,1],[4,2],[4,3],[4,4],[4,5],[5,5],[5,4]],
+      "CRACKLES":    [[5,3],[5,2],[5,1],[5,0],[6,0],[6,1],[6,2],[6,3]],
+    }
+  },
+  {
+    id:145,theme:"GI Anatomy",
+    sp:"ALIMENTARY",
+    words:["JEJUNUM","DUODENUM","CECUM","ILEUM"],
+    colors:['--c1','--c2','--c3','--c4'],
+    grid:[
+      ['A','L','I','M','E','N'],
+      ['E','J','Y','R','A','T'],
+      ['J','U','N','U','M','D'],
+      ['U','N','E','D','O','U'],
+      ['M','C','E','C','U','M'],
+      ['I','L','E','U','M','G'],
+      ['D','J','R','Y','A','K'],
+    ],
+    paths:{
+      "ALIMENTARY":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,5],[1,4],[1,3],[1,2]],
+      "JEJUNUM":   [[1,1],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4]],
+      "DUODENUM":  [[2,5],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0],[4,0]],
+      "CECUM":     [[4,1],[4,2],[4,3],[4,4],[4,5]],
+      "ILEUM":     [[5,0],[5,1],[5,2],[5,3],[5,4]],
+    }
+  }
+];
+
+// ── WORD LIST for earn-hint detection (common English 4+ letter words) ──
+// A small subset is fine — just needs to catch reasonable guesses
+const BONUS_WORDS=new Set([
+  'ACHE','ACID','ACNE','ACTS','AIDE','AIMS','AIRY','ALSO','ARCH','AREA','ARMS','ARTE',
+  'BILE','BITE','BLED','BLED','BONE','BORE','BORN','BRIM','BURN',
+  'CALL','CALM','CARE','CASE','CAST','CELL','CITE','CLAM','CLOT','COAT','COLA','COLD','COIL','COME','CORD','CORE','CORN','COST','COTS',
+  'DAME','DARE','DARK','DATA','DEAR','DISC','DISH','DOTE','DOSE','DRAB','DRAM','DRAW','DRIP','DROP','DRUG','DRUM','DUCT','DULL','DUNE',
+  'EACH','EARL','EARN','EASE','EAST','ECHO','EDGE','EMIT','EMIT',
+  'FACE','FACT','FAIL','FAIR','FALL','FAME','FARE','FARM','FAST','FATE','FEAT','FEEL','FILE','FILL','FILM','FINE','FIRE','FIRM','FISH','FIST','FLAG','FLAT','FLAW','FLEA','FLEX','FLEW','FLIT','FLOW','FOAL','FOAM','FOLD','FOLK','FOND','FONT','FOOL','FORE','FORK','FORM','FOUL','FOUR','FREE','FRET','FUME',
+  'GAIT','GAIN','GALE','GALL','GAZE','GEAR','GERM','GILT','GIST','GLAD','GLOW','GLUE','GNAW','GOAL','GOUT','GRAB','GRIM','GRIP','GRIT','GUST',
+  'HACK','HAIL','HALF','HALL','HALT','HANG','HARD','HARE','HARM','HATE','HEAL','HEAP','HEAT','HEEL','HEIR','HELD','HELM','HILT','HINT','HIRE','HOLE','HOLM','HOLY','HOME','HOOK','HORN','HOSE','HOST','HOUR','HULL','HURT',
+  'ICON','IDEA','IDLE','ILLS','IRIS',
+  'JAIL','JEST','JOLT','JUST',
+  'KEEN','KEEL','KEEP','KILL','KIND','KING','KNOT','KNOW',
+  'LACE','LACK','LAME','LAMP','LANE','LARD','LASH','LAST','LATE','LAUD','LEAN','LEAP','LEFT','LEND','LENS','LIEN','LIFT','LIMB','LIME','LIMP','LINE','LINT','LIST','LIVE','LOBE','LOFT','LONE','LONG','LORE','LOSS','LOST','LOUD','LULL','LUMP','LUNG',
+  'MADE','MAIL','MAIN','MALL','MALT','MARE','MARK','MARS','MART','MAST','MATE','MEAL','MEAN','MEET','MELT','MESH','MILD','MILL','MIME','MIND','MINT','MIST','MOAT','MODE','MOLE','MOOT','MORE','MOST','MOTH','MOVE','MUCH','MUSC','MUSE','MUST',
+  'NAIL','NAME','NECK','NEED','NEST','NICE','NINE','NODE','NORM','NOSE','NOTE','NULL',
+  'OATH','ODDS','OMEN','ORAL','ORBS',
+  'PACE','PACK','PAGE','PAIN','PAIR','PALE','PALM','PART','PAST','PATH','PAVE','PEAK','PEEL','PEER','PILL','PINE','PINK','PIPE','PITH','PLAN','PLAY','PLEA','PLOD','PLOT','PLUG','POEM','PORE','PORT','POSE','POST','POUR','PREP','PREY','PRIM','PROD','PROF','PROP','PULL','PULP','PURE','PUSH',
+  'RACE','RACK','RAFT','RAGE','RAIL','RAMP','RANG','RANK','RASH','RATE','RAVE','READ','REAL','REAP','REED','REEL','REIN','REND','RENT','REST','RICE','RICH','RIDE','RIFT','RING','RIPE','RISE','RISK','RITE','ROAD','ROAM','ROBE','RODE','ROLE','ROLL','ROOF','ROOT','ROSE','ROTE','RULE','RUNE','RUSE','RUSH',
+  'SACK','SAFE','SAIL','SALT','SAME','SAND','SANE','SCAR','SEAL','SEAM','SEAR','SECT','SEED','SELF','SELL','SEMI','SEND','SEEP','SHIN','SHIP','SHOT','SHOW','SICK','SIDE','SIFT','SIGN','SILK','SILT','SING','SINK','SITE','SIZE','SKIN','SKIP','SLAB','SLAG','SLAM','SLAP','SLIM','SLIP','SLOT','SLOW','SLUM','SNAP','SOFT','SOIL','SOLD','SOLE','SOME','SONG','SOON','SORE','SORT','SOUL','SPAN','SPAR','SPIN','SPIT','SPOT','SPUR','STEM','STEP','STIR','STOP','STUB','STUN','SUCH','SUIT','SULK','SWAY','SWIM','SWAM',
+  'TAIL','TALE','TALL','TAME','TANG','TAPE','TASK','TAUT','TEAR','TEND','TENT','TEST','THAN','THEM','THEN','THIN','THIS','TIDE','TIER','TILE','TILL','TILT','TIME','TINT','TIRE','TOLL','TOMB','TOME','TONE','TOOL','TORN','TRAM','TRAP','TRAY','TRIM','TRIO','TRIP','TRUE','TUBE','TUCK','TUFT','TUNE','TURN','TUSK',
+  'UNIT','UNTO','UPON','URGE','USED',
+  'VANE','VEIL','VEIN','VEST','VIAL','VICE','VIEW','VILE','VINE','VOID','VOLE',
+  'WADE','WAKE','WALK','WALL','WANE','WARD','WARM','WARY','WAVE','WEAL','WEAR','WEED','WELD','WELL','WELT','WENT','WERE','WEST','WHEN','WHET','WHIM','WHIP','WIFE','WILD','WILE','WILL','WILT','WIND','WINE','WING','WIPE','WIRE','WISE','WISH','WITH','WOKE','WOMB','WONT','WORD','WORE','WORK','WORM','WORN','WRAP','WRIT',
+  'YAWN','YEAR','YELL',
+  'ZEAL','ZONE',
+  // Medical extras
+  'BILE','CLOT','CYST','GOUT','LOBE','LIMB','LUNG','NODE','PORE','RASH','SCAR','VEIN','VIAL',
+  'ACNE','ACHE','COMA','DOSE','PAIN','PILL','SCAN','SWAB','WARD','DERM','STAT',
+]);
+
+// ── STREAK ──
+const SK='fb_s',SL='fb_l',SH='fb_h';
+const today=()=>new Date().toISOString().slice(0,10);
+const yday=()=>{const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);};
+let streak=+(localStorage.getItem(SK)||0);
+let lastD=localStorage.getItem(SL)||'';
+let hist=JSON.parse(localStorage.getItem(SH)||'[]');
+if(lastD&&lastD!==yday()&&lastD!==today()){streak=0;localStorage.setItem(SK,0);}
+
+function markPlayed(){
+  if(lastD===today())return;
+  streak++;lastD=today();
+  if(!hist.includes(today()))hist.push(today());
+  localStorage.setItem(SK,streak);
+  localStorage.setItem(SL,lastD);
+  localStorage.setItem(SH,JSON.stringify(hist));
+  renderStreak();
+}
+
+function renderStreak(){
+  document.getElementById('strN').textContent=streak;
+  const el=document.getElementById('pips');el.innerHTML='';
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const pip=document.createElement('div');
+    pip.className='pip'+(ds===today()&&hist.includes(ds)?' today':hist.includes(ds)?' done':'');
+    el.appendChild(pip);
+  }
+}
+
+// ── STATE ──
+let pz,sel=[],found=[],earnCount=0,hintCount=0,hintUsed=0,moves=0,t0,pressing=false,shareStr='';
+let cells=[],validSet=new Set();
+let toastTimer=null;
+let splashDismissed=false;
+
+// ── SPLASH ──
+function dismissSplash(){
+  document.getElementById('splash').classList.add('gone');
+  splashDismissed=true;
+}
+
+// ── INIT ──
+function init(){
+  // Pick puzzle based on day of year for "daily" feel
+  const dayOfYear=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/(1000*60*60*24));
+  const idx=dayOfYear%PZS.length;
+  pz=PZS[idx];
+
+  document.getElementById('splashTheme').textContent=pz.theme;
+  document.getElementById('hdrId').textContent=`PUZZLE #${pz.id}`;
+  document.getElementById('hdrDate').textContent=
+    new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+  renderStreak();
+  buildSlots();
+  buildGrid();
+  updStats();
+  updHints();
+  countdown();setInterval(countdown,1000);
+}
+
+// ── SLOTS — blank placeholder pills ──
+function buildSlots(){
+  const el=document.getElementById('slots');
+  el.innerHTML='';
+  // Spangram slot first
+  const sp=document.createElement('div');
+  sp.className='slot sp-slot-placeholder';
+  sp.id='slot-sp';
+  // Show letter count as dots
+  sp.textContent='·'.repeat(pz.sp.length);
+  sp.style.letterSpacing='.1em';
+  sp.style.color='var(--ink4)';
+  sp.style.borderColor='var(--bd2)';
+  el.appendChild(sp);
+
+  pz.words.forEach((w,i)=>{
+    const d=document.createElement('div');
+    d.className='slot';
+    d.id=`slot-${i}`;
+    d.textContent='·'.repeat(w.length);
+    d.style.letterSpacing='.1em';
+    d.style.color='var(--ink4)';
+    el.appendChild(d);
+  });
+
+  document.getElementById('sT').textContent=pz.words.length+1;
+}
+
+function revealSlot(word,isSp,color){
+  let el;
+  if(isSp){
+    el=document.getElementById('slot-sp');
+    el.className='slot sp-slot';
+    el.style.background='var(--sp-col)';
+    el.style.borderColor='transparent';
+    el.style.color='#fff';
+    el.style.letterSpacing='.04em';
+  } else {
+    const i=pz.words.indexOf(word);
+    el=document.getElementById(`slot-${i}`);
+    el.className='slot found-slot';
+    el.style.background=`var(${color})`;
+    el.style.borderColor='transparent';
+    el.style.color='#fff';
+    el.style.letterSpacing='.04em';
+  }
+  el.textContent=word;
+  // Re-trigger animation
+  el.style.animation='none';void el.offsetWidth;
+  el.style.animation='';
+}
+
+// ── GRID ──
+function buildGrid(){
+  const g=document.getElementById('grid'),sv=document.getElementById('svg-overlay');
+  g.innerHTML='';sv.innerHTML='';cells=[];validSet=new Set();
+
+  // Build valid cell set
+  Object.values(pz.paths).forEach(path=>path.forEach(([r,c])=>validSet.add(`${r},${c}`)));
+
+  g.style.gridTemplateColumns=`repeat(${COLS},var(--cell))`;
+
+  // Remove old listeners
+  document.removeEventListener('mousemove',onMov);
+  document.removeEventListener('mouseup',onEnd);
+  document.removeEventListener('touchmove',onTMov);
+  document.removeEventListener('touchend',onEnd);
+
+  for(let r=0;r<ROWS;r++){
+    cells[r]=[];
+    for(let c=0;c<COLS;c++){
+      const key=`${r},${c}`;
+      if(!validSet.has(key)){
+        const blank=document.createElement('div');
+        blank.className='cell-blank';
+        g.appendChild(blank);
+        cells[r][c]=null;
+      } else {
+        const el=document.createElement('div');
+        el.className='cell';
+        el.textContent=pz.grid[r][c];
+        el.dataset.r=r;el.dataset.c=c;
+        el.addEventListener('mousedown',e=>{e.preventDefault();beginS(r,c);});
+        el.addEventListener('touchstart',e=>{e.preventDefault();beginS(r,c);},{passive:false});
+        g.appendChild(el);
+        cells[r][c]=el;
+      }
+    }
+  }
+
+  document.addEventListener('mousemove',onMov);
+  document.addEventListener('mouseup',onEnd);
+  document.addEventListener('touchmove',onTMov,{passive:false});
+  document.addEventListener('touchend',onEnd);
+}
+
+// ── DRAG ──
+function onMov(e){
+  if(!pressing)return;
+  page().classList.add('no-scroll');
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  if(el?.classList.contains('cell'))addS(+el.dataset.r,+el.dataset.c);
+}
+function onTMov(e){
+  if(!pressing)return;
+  e.preventDefault();
+  page().classList.add('no-scroll');
+  const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(el?.classList.contains('cell'))addS(+el.dataset.r,+el.dataset.c);
+}
+function onEnd(){
+  if(!pressing)return;
+  pressing=false;
+  page().classList.remove('no-scroll');
+  sel.length>=3?check():clearS();
+}
+
+const page=()=>document.getElementById('page');
+const isDone=(r,c)=>{
+  const cl=cells[r]?.[c];
+  return cl&&(cl.classList.contains('found')||cl.classList.contains('sp-found')||cl.classList.contains('earn-found'));
+};
+
+function beginS(r,c){
+  if(isDone(r,c))return;
+  pressing=true;sel=[{r,c}];refreshUI();
+}
+function addS(r,c){
+  if(!pressing||!cells[r]?.[c]||isDone(r,c))return;
+  const last=sel[sel.length-1];
+  if(last.r===r&&last.c===c)return;
+  if(Math.abs(r-last.r)>1||Math.abs(c-last.c)>1)return;
+  if(sel.length>=2){
+    const pv=sel[sel.length-2];
+    if(pv.r===r&&pv.c===c){sel.pop();refreshUI();return;}
+  }
+  if(sel.some(s=>s.r===r&&s.c===c))return;
+  sel.push({r,c});refreshUI();
+}
+function clearS(){
+  sel=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)cells[r]?.[c]?.classList.remove('sel');
+  setCur('');clearLine();
+}
+function refreshUI(){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(!isDone(r,c))cells[r]?.[c]?.classList.remove('sel');
+  sel.forEach(s=>{if(!isDone(s.r,s.c))cells[s.r][s.c].classList.add('sel');});
+  setCur(sel.map(s=>pz.grid[s.r][s.c]).join(''));
+  drawLine();
+}
+
+// ── CURRENT WORD ──
+function setCur(text,cls=''){
+  const el=document.getElementById('cur');
+  el.className='cur'+(cls?' '+cls:'');
+  if(cls==='bad'){el.style.animation='none';void el.offsetWidth;el.style.animation='';}
+  el.textContent=text;
+}
+
+// ── SVG LINE ──
+function cellCtr(r,c){
+  const gr=document.getElementById('grid').getBoundingClientRect();
+  const cr=cells[r][c].getBoundingClientRect();
+  return{x:cr.left-gr.left+cr.width/2,y:cr.top-gr.top+cr.height/2};
+}
+function drawLine(){
+  clearLine();
+  if(sel.length<2)return;
+  const sv=document.getElementById('svg-overlay');
+  const g=document.getElementById('grid');
+  sv.setAttribute('width',g.offsetWidth);
+  sv.setAttribute('height',g.offsetHeight);
+  const pts=sel.map(s=>{const p=cellCtr(s.r,s.c);return`${Math.round(p.x)},${Math.round(p.y)}`;}).join(' ');
+  const pl=document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  pl.setAttribute('points',pts);
+  pl.setAttribute('class','drag-line');
+  pl.id='selLine';
+  sv.appendChild(pl);
+}
+function clearLine(){document.getElementById('selLine')?.remove();}
+
+// ── CHECK ──
+function check(){
+  moves++;
+  const w=sel.map(s=>pz.grid[s.r][s.c]).join('');
+
+  // Already found
+  if(found.includes(w)){
+    toast(`Already found ${w}`);
+    setCur(w,'bad');setTimeout(clearS,480);updStats();return;
+  }
+
+  // Spangram
+  if(w===pz.sp){accept(w,true);return;}
+
+  // Theme word
+  if(pz.words.includes(w)){accept(w,false);return;}
+
+  // Bonus word (earn hint credit)
+  if(w.length>=4&&BONUS_WORDS.has(w)){
+    earnHint(w);return;
+  }
+
+  // Wrong
+  setCur(w,'bad');
+  setTimeout(clearS,480);updStats();
+}
+
+// ── EARN HINT ──
+function earnHint(w){
+  const selCopy=[...sel];
+  earnCount++;
+
+  selCopy.forEach((s,i)=>{
+    setTimeout(()=>{
+      cells[s.r][s.c].classList.remove('sel');
+      cells[s.r][s.c].classList.add('earn-found');
+    },i*35);
+  });
+
+  setCur(w,'earn');
+  clearLine();sel=[];
+
+  setTimeout(()=>{
+    // Every 3 earn-words = 1 hint
+    if(earnCount%3===0){
+      hintCount++;
+      toast('Hint earned!');
+    }
+    updHints();updStats(false);
+    setCur('');
+  },selCopy.length*35+200);
+}
+
+// ── ACCEPT WORD ──
+function accept(w,isSp){
+  found.push(w);
+  const cv=isSp?'--sp-col':pz.colors[pz.words.indexOf(w)];
+  const selCopy=[...sel];
+
+  selCopy.forEach((s,i)=>{
+    setTimeout(()=>{
+      const cl=cells[s.r][s.c];
+      cl.classList.remove('sel');
+      cl.classList.add(isSp?'sp-found':'found');
+      if(!isSp)cl.style.background=`var(${cv})`;
+    },i*40);
+  });
+
+  setCur(w+(isSp?' ★':' ✓'),'ok');
+  clearLine();sel=[];
+
+  setTimeout(()=>{
+    revealSlot(w,isSp,cv);
+    updStats(true);
+    if(found.length===pz.words.length+1){
+      markPlayed();
+      setTimeout(()=>{fireConfetti();showWin();},600);
+    }
+  },selCopy.length*40+120);
+}
+
+// ── HINTS ──
+function doHint(){
+  if(hintCount<=0)return;
+  hintCount--;hintUsed++;
+  updHints();
+
+  const uf=[pz.sp,...pz.words].find(w=>!found.includes(w));
+  if(!uf)return;
+  const path=pz.paths[uf];
+  for(const[r,c]of path){
+    if(!isDone(r,c)&&cells[r]?.[c]){
+      const el=cells[r][c];
+      el.classList.add('hinted');
+      setTimeout(()=>el?.classList.remove('hinted'),2400);
+      break;
+    }
+  }
+}
+
+function updHints(){
+  // Earn pips — show progress toward next hint (earnCount % 3)
+  const progress=earnCount%3;
+  document.getElementById('earnPips').querySelectorAll('.earn-pip').forEach((p,i)=>{
+    p.className='earn-pip'+(i<progress?' lit':'');
+  });
+  document.getElementById('hintCount').textContent=
+    hintCount===1?'1 hint':`${hintCount} hints`;
+  document.getElementById('btnHint').disabled=hintCount<=0;
+}
+
+// ── STATS ──
+function updStats(bumpFound=false){
+  const sf=document.getElementById('sF');
+  sf.textContent=found.length;
+  if(bumpFound){sf.classList.remove('bump');void sf.offsetWidth;sf.classList.add('bump');}
+  document.getElementById('sM').textContent=moves;
+}
+
+// ── TOAST ──
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+// ── CONFETTI ──
+function fireConfetti(){
+  const canvas=document.getElementById('confetti');
+  const ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+
+  const colors=['#dc2626','#9333ea','#0891b2','#16a34a','#d97706','#be185d','#92400e'];
+  const particles=Array.from({length:120},()=>({
+    x:Math.random()*canvas.width,
+    y:-20-Math.random()*100,
+    r:4+Math.random()*5,
+    d:1.5+Math.random()*3,
+    color:colors[Math.floor(Math.random()*colors.length)],
+    tilt:Math.random()*10-5,
+    tiltAngle:0,
+    tiltSpeed:.1+Math.random()*.1,
+    spin:Math.random()>.5?1:-1,
+  }));
+
+  let frame=0;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      ctx.beginPath();
+      ctx.ellipse(p.x,p.y,p.r,p.r*.6,p.tiltAngle,0,Math.PI*2);
+      ctx.fillStyle=p.color;ctx.fill();
+      p.y+=p.d;
+      p.tiltAngle+=p.tiltSpeed;
+      p.tilt+=p.spin*.3;
+      p.x+=Math.sin(p.tiltAngle)*.5;
+    });
+    frame++;
+    if(frame<120)requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+// ── WIN ──
+function showWin(){
+  const sec=Math.round((Date.now()-t0)/1000);
+  const ts=sec>=60?`${Math.floor(sec/60)}m ${sec%60}s`:`${sec}s`;
+  document.getElementById('wM').textContent=moves;
+  document.getElementById('wH').textContent=hintUsed;
+  document.getElementById('wT').textContent=ts;
+
+  // Dynamic fibrin clot message based on performance
+  const clotMsgs=[
+    {max:10,msg:'Haemostasis in record time 🔬'},
+    {max:20,msg:'Rapid fibrin polymerisation'},
+    {max:35,msg:'Stable clot architecture'},
+    {max:999,msg:'Clot formed — thrombus complete'},
+  ];
+  const clot=clotMsgs.find(m=>moves<=m.max);
+  document.getElementById('winClot').textContent=clot.msg;
+
+  const wc=document.getElementById('winSlots');wc.innerHTML='';
+  found.forEach(w=>{
+    const isSp=w===pz.sp;
+    const cv=isSp?'--sp-col':pz.colors[pz.words.indexOf(w)];
+    const chip=document.createElement('div');
+    chip.className='slot '+(isSp?'sp-slot':'found-slot');
+    chip.textContent=w;
+    chip.style.background=`var(${cv})`;
+    chip.style.borderColor='transparent';
+    chip.style.color='#fff';
+    chip.style.animation='slotPop .3s cubic-bezier(.34,1.5,.64,1) both';
+    chip.style.animationDelay=`${found.indexOf(w)*0.08}s`;
+    wc.appendChild(chip);
+  });
+
+  document.getElementById('winSub').textContent=
+    `"${pz.theme}" · Puzzle #${pz.id} · 🔥 ${streak} day streak`;
+
+  const em=['🔴','🟣','🔵','🟢','🟠','🩷'];
+  const map={};pz.words.forEach((w,i)=>{map[w]=em[i];});map[pz.sp]='🟡';
+  shareStr=`Fibrin #${pz.id}\n"${pz.theme}"\n`;
+  shareStr+=found.map(w=>`${map[w]||'⬛'} ${w}`).join('\n');
+  shareStr+=`\n${moves} moves · ${hintUsed} hints used · ${ts} · 🔥${streak}`;
+  document.getElementById('sharePre').textContent=shareStr;
+  document.getElementById('winBg').className='win-bg show';
+}
+
+function closeWin(){
+  document.getElementById('winBg').className='win-bg';
+}
+
+function doCopy(){
+  navigator.clipboard.writeText(shareStr).catch(()=>{});
+  const b=document.querySelector('.btn-primary');
+  b.textContent='Copied!';
+  setTimeout(()=>b.textContent='Copy result',2000);
+}
+
+// ── COUNTDOWN ──
+function countdown(){
+  const now=new Date(),mid=new Date();mid.setHours(24,0,0,0);
+  const d=mid-now;
+  const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);
+  document.getElementById('nextT').textContent=
+    `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+}
+
+// ── START ──
+t0=Date.now();
+init();
+</script>
+</body>
+</html>
