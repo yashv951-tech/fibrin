@@ -880,7 +880,8 @@ function accept(w,isSp){
     updStats(true);
     if(found.length===pz.words.length+1){
       markPlayed();
-      setTimeout(()=>{fireConfetti();setTimeout(showWin,1200);},600);
+      fireConfetti();
+      setTimeout(showWin,800);
     }
   },selCopy.length*40+120);
 }
@@ -974,64 +975,75 @@ function fireConfetti(){
 
 // ── WIN ──
 function showWin(){
-  const sec=Math.round((Date.now()-t0)/1000);
-  const ts=sec>=60?`${Math.floor(sec/60)}m ${sec%60}s`:`${sec}s`;
-  document.getElementById('wM').textContent=moves;
-  document.getElementById('wH').textContent=hintUsed;
-  document.getElementById('wT').textContent=ts;
+  try{
+    const sec=Math.round((Date.now()-t0)/1000);
+    const ts=sec>=60?`${Math.floor(sec/60)}m ${sec%60}s`:`${sec}s`;
 
-  // Dynamic fibrin clot message based on performance
-  const clotMsgs=[
-    {max:10,msg:'Haemostasis in record time 🔬'},
-    {max:20,msg:'Rapid fibrin polymerisation'},
-    {max:35,msg:'Stable clot architecture'},
-    {max:999,msg:'Clot formed — thrombus complete'},
-  ];
-  const clot=clotMsgs.find(m=>moves<=m.max);
-  document.getElementById('winClot').textContent=clot.msg;
+    document.getElementById('wM').textContent=moves;
+    document.getElementById('wH').textContent=hintUsed;
+    document.getElementById('wT').textContent=ts;
 
-  const wc=document.getElementById('winSlots');wc.innerHTML='';
-  found.forEach(w=>{
-    const isSp=w===pz.sp;
-    const cv=isSp?'--sp-col':pz.colors[pz.words.indexOf(w)];
-    const chip=document.createElement('div');
-    chip.className='slot '+(isSp?'sp-slot':'found-slot');
-    chip.textContent=w;
-    chip.style.background=`var(${cv})`;
-    chip.style.borderColor='transparent';
-    chip.style.color='#fff';
-    chip.style.animation='slotPop .3s cubic-bezier(.34,1.5,.64,1) both';
-    chip.style.animationDelay=`${found.indexOf(w)*0.08}s`;
-    wc.appendChild(chip);
-  });
+    const clotMsgs=[
+      {max:10,msg:'Haemostasis in record time 🔬'},
+      {max:20,msg:'Rapid fibrin polymerisation'},
+      {max:35,msg:'Stable clot architecture'},
+      {max:999,msg:'Clot formed — thrombus complete'},
+    ];
+    const clot=clotMsgs.find(m=>moves<=m.max)||clotMsgs[3];
+    document.getElementById('winClot').textContent=clot.msg;
 
-  document.getElementById('winSub').textContent=
-    `"${pz.theme}" · Puzzle #${pz.id} · 🔥 ${streak} day streak`;
+    // Word slots
+    const wc=document.getElementById('winSlots');
+    wc.innerHTML='';
+    const wordColors={'--c1':'#dc2626','--c2':'#7c3aed','--c3':'#0891b2','--c4':'#16a34a','--c5':'#d97706','--c6':'#be185d','--sp-col':'#92400e'};
+    found.forEach((w,idx)=>{
+      const isSp=w===pz.sp;
+      const cv=isSp?'--sp-col':(pz.colors[pz.words.indexOf(w)]||'--c1');
+      const chip=document.createElement('div');
+      chip.className='slot '+(isSp?'sp-slot':'found-slot');
+      chip.textContent=w;
+      chip.style.background=wordColors[cv]||'#dc2626';
+      chip.style.borderColor='transparent';
+      chip.style.color='#fff';
+      wc.appendChild(chip);
+    });
 
-  const em=['🔴','🟣','🔵','🟢','🟠','🩷'];
-  const map={};pz.words.forEach((w,i)=>{map[w]=em[i];});map[pz.sp]='🟡';
-  shareStr=`Fibrin #${pz.id}\n"${pz.theme}"\n`;
-  shareStr+=found.map(w=>`${map[w]||'⬛'} ${w}`).join('\n');
-  shareStr+=`\n${moves} moves · ${hintUsed} hints used · ${ts} · 🔥${streak}`;
-  document.getElementById('sharePre').style.display='none';
+    document.getElementById('winSub').textContent=
+      `"${pz.theme}" · Puzzle #${pz.id} · 🔥 ${streak} day streak`;
 
-  // Show win sheet first, then render image preview
-  document.getElementById('winBg').className='win-bg show';
+    // Build share text
+    const em=['🔴','🟣','🔵','🟢','🟠','🩷'];
+    const map={};
+    pz.words.forEach((w,i)=>{map[w]=em[i]||'⬛';});
+    map[pz.sp]='🟡';
+    const sec2=Math.round((Date.now()-t0)/1000);
+    const ts2=sec2>=60?`${Math.floor(sec2/60)}m ${sec2%60}s`:`${sec2}s`;
+    shareStr=`Fibrin #${pz.id} — "${pz.theme}"\n`;
+    shareStr+=found.map(w=>`${map[w]||'⬛'} ${w}`).join('\n');
+    shareStr+=`\n${moves} moves · ${hintUsed} hints · ${ts2} · 🔥${streak}\nplayfibrin.com`;
 
-  // Render share image preview after sheet is visible
-  setTimeout(()=>{
-    try{
-      const wrap=document.getElementById('shareImgWrap');
-      wrap.innerHTML='';
-      const canvas=buildShareImage();
-      canvas.style.width='100%';
-      canvas.style.height='auto';
-      canvas.style.display='block';
-      wrap.appendChild(canvas);
-    }catch(e){
-      console.warn('Share image failed:',e);
-    }
-  },200);
+    // Show win sheet immediately
+    document.getElementById('winBg').className='win-bg show';
+
+    // Try to render share image after sheet is visible — optional, won't block win
+    setTimeout(()=>{
+      try{
+        const wrap=document.getElementById('shareImgWrap');
+        if(!wrap)return;
+        wrap.innerHTML='';
+        const canvas=buildShareImage(ts2);
+        canvas.style.cssText='width:100%;height:auto;display:block;border-radius:8px;';
+        wrap.appendChild(canvas);
+      }catch(imgErr){
+        console.warn('Share image skipped:',imgErr);
+      }
+    },300);
+
+  }catch(err){
+    // Nuclear fallback — if anything fails, still show the win screen
+    console.error('showWin error:',err);
+    document.getElementById('winBg').className='win-bg show';
+  }
 }
 
 function closeWin(){
@@ -1039,147 +1051,77 @@ function closeWin(){
 }
 
 // ── SHARE IMAGE ──
-function buildShareImage(){
-  const W=600, H=750;
+function buildShareImage(ts){
+  const W=600,H=680;
   const canvas=document.createElement('canvas');
-  canvas.width=W; canvas.height=H;
+  canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
+  const wordColors={'--c1':'#dc2626','--c2':'#7c3aed','--c3':'#0891b2','--c4':'#16a34a','--c5':'#d97706','--c6':'#be185d','--sp-col':'#92400e'};
 
-  // Background — clean white
-  ctx.fillStyle='#ffffff';
-  ctx.fillRect(0,0,W,H);
+  // White background
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
 
-  // Top red hero band
-  ctx.fillStyle='#dc2626';
-  ctx.fillRect(0,0,W,200);
+  // Red hero
+  ctx.fillStyle='#dc2626';ctx.fillRect(0,0,W,160);
 
-  // Fibrin mesh lines on hero
-  ctx.strokeStyle='rgba(255,255,255,0.08)';
-  ctx.lineWidth=1;
-  for(let i=-200;i<W+200;i+=20){
-    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+200,200);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i-200,200);ctx.stroke();
+  // Mesh lines on hero
+  ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=1;
+  for(let i=-160;i<W+160;i+=18){
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+160,160);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i-160,160);ctx.stroke();
   }
 
   // Logo
-  ctx.font='700 32px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='rgba(255,255,255,0.9)';
-  ctx.textAlign='left';
-  ctx.fillText('Fibrin', 36, 56);
+  ctx.fillStyle='#fff';ctx.font='bold 28px system-ui,sans-serif';ctx.textAlign='left';
+  ctx.fillText('Fibrin.',36,48);
 
-  // Dot after logo
-  ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.beginPath();ctx.arc(110,47,4,0,Math.PI*2);ctx.fill();
+  // Puzzle number
+  ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='500 12px system-ui,sans-serif';ctx.textAlign='right';
+  ctx.fillText(`PUZZLE #${pz.id}`,W-36,44);
+  ctx.fillText(new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),W-36,62);
 
-  // Puzzle number top right
-  ctx.font='500 13px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='rgba(255,255,255,0.6)';
-  ctx.textAlign='right';
-  ctx.fillText(`PUZZLE #${pz.id}`, W-36, 52);
-
-  // Date
-  const dateStr=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  ctx.font='400 12px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='rgba(255,255,255,0.45)';
-  ctx.fillText(dateStr, W-36, 70);
-
-  // Theme label
-  ctx.font='500 11px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='rgba(255,255,255,0.55)';
-  ctx.textAlign='left';
-  ctx.letterSpacing='2px';
-  ctx.fillText("TODAY'S THEME", 36, 115);
-
-  // Theme name
-  ctx.font='700 28px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='#ffffff';
-  ctx.fillText(pz.theme, 36, 150);
-
-  // Spangram pill
-  const spW=ctx.measureText(pz.sp).width+28;
-  roundRect(ctx,36,162,spW,28,14,'#92400e');
-  ctx.font='600 12px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='#fff';
-  ctx.textAlign='center';
-  ctx.fillText(pz.sp, 36+spW/2, 181);
-
-  // White body
-  const bodyY=200;
+  // Theme
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='500 10px system-ui,sans-serif';ctx.textAlign='left';
+  ctx.fillText("TODAY'S THEME",36,90);
+  ctx.fillStyle='#fff';ctx.font='bold 24px system-ui,sans-serif';
+  ctx.fillText(pz.theme,36,122);
 
   // Stats row
-  const statY=bodyY+32;
-  const stats=[
-    {label:'MOVES',val:moves},
-    {label:'HINTS',val:hintUsed},
-    {label:'STREAK',val:`🔥${streak}`},
-  ];
-  const sw=W/3;
-  stats.forEach((s,i)=>{
-    const x=i*sw+sw/2;
-    ctx.font='700 28px -apple-system,system-ui,sans-serif';
-    ctx.fillStyle='#1a0505';
-    ctx.textAlign='center';
-    ctx.fillText(s.val, x, statY+28);
-    ctx.font='500 10px -apple-system,system-ui,sans-serif';
-    ctx.fillStyle='#d4a0a0';
-    ctx.fillText(s.label, x, statY+48);
-    // divider
-    if(i<2){
-      ctx.fillStyle='#fdd';
-      ctx.fillRect((i+1)*sw-0.5,statY,1,50);
-    }
+  ctx.fillStyle='#f8f8f8';ctx.fillRect(0,160,W,60);
+  ctx.fillStyle='#fdd';ctx.fillRect(0,160,W,1);ctx.fillRect(0,219,W,1);
+  [[moves,'MOVES',W/6],[hintUsed,'HINTS',W/2],[`🔥${streak}`,'STREAK',5*W/6]].forEach(([v,l,x])=>{
+    ctx.fillStyle='#1a0505';ctx.font='bold 22px system-ui,sans-serif';ctx.textAlign='center';
+    ctx.fillText(v,x,192);
+    ctx.fillStyle='#d4a0a0';ctx.font='500 10px system-ui,sans-serif';
+    ctx.fillText(l,x,210);
   });
+  ctx.fillStyle='#fdd';ctx.fillRect(W/3,168,1,44);ctx.fillRect(2*W/3,168,1,44);
 
-  // Divider line
-  ctx.fillStyle='#fdd';
-  ctx.fillRect(36,statY+66,W-72,1);
-
-  // Words found section
-  const wordColors={'--c1':'#dc2626','--c2':'#7c3aed','--c3':'#0891b2','--c4':'#16a34a','--c5':'#d97706','--c6':'#be185d','--sp-col':'#92400e'};
-  const wordY=statY+90;
-  const wordH=42;
-  const pad=16;
-
-  ctx.font='500 10px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='#d4a0a0';
-  ctx.textAlign='left';
-  ctx.fillText('WORDS FOUND', 36, wordY-8);
+  // Words
+  const wordY=236,wordH=38,gap=8,pad=16;
+  ctx.fillStyle='#d4a0a0';ctx.font='500 10px system-ui,sans-serif';ctx.textAlign='left';
+  ctx.fillText('WORDS FOUND',36,wordY-6);
 
   found.forEach((w,i)=>{
     const isSp=w===pz.sp;
-    const colorKey=isSp?'--sp-col':pz.colors[pz.words.indexOf(w)];
-    const col=wordColors[colorKey]||'#dc2626';
-    const y=wordY+i*(wordH+8);
-
-    // Word pill background
-    roundRect(ctx,36,y,W-72,wordH,10,col);
-
-    // Word text
-    ctx.font='600 15px -apple-system,system-ui,sans-serif';
-    ctx.fillStyle='#ffffff';
-    ctx.textAlign='left';
-    ctx.fillText(w, 36+pad, y+wordH/2+5);
-
-    // Spangram star badge
+    const cv=isSp?'--sp-col':(pz.colors[pz.words.indexOf(w)]||'--c1');
+    const col=wordColors[cv]||'#dc2626';
+    const y=wordY+i*(wordH+gap);
+    roundRect(ctx,36,y,W-72,wordH,8,col);
+    ctx.fillStyle='#fff';ctx.font='600 14px system-ui,sans-serif';ctx.textAlign='left';
+    ctx.fillText(w,36+pad,y+wordH/2+5);
     if(isSp){
-      ctx.font='500 11px -apple-system,system-ui,sans-serif';
-      ctx.fillStyle='rgba(255,255,255,0.6)';
-      ctx.textAlign='right';
-      ctx.fillText('★ SPANGRAM', W-36-pad, y+wordH/2+5);
+      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='500 10px system-ui,sans-serif';ctx.textAlign='right';
+      ctx.fillText('★ SPANGRAM',W-36-pad,y+wordH/2+5);
     }
   });
 
   // Footer
-  const footY=H-40;
-  ctx.fillStyle='#fdd';
-  ctx.fillRect(36,footY-12,W-72,1);
+  const footY=H-28;
+  ctx.fillStyle='#fdd';ctx.fillRect(36,footY-10,W-72,1);
+  ctx.fillStyle='#d4a0a0';ctx.font='500 12px system-ui,sans-serif';ctx.textAlign='center';
+  ctx.fillText('playfibrin.com',W/2,footY+8);
 
-  ctx.font='500 13px -apple-system,system-ui,sans-serif';
-  ctx.fillStyle='#d4a0a0';
-  ctx.textAlign='center';
-  ctx.fillText('playfibrin.com', W/2, footY+10);
-
-  ctx.textAlign='left';
   return canvas;
 }
 
@@ -1195,44 +1137,31 @@ function roundRect(ctx,x,y,w,h,r,fill){
 }
 
 function doShareImage(){
-  const canvas=buildShareImage();
+  try{
+    const sec=Math.round((Date.now()-t0)/1000);
+    const ts=sec>=60?`${Math.floor(sec/60)}m ${sec%60}s`:`${sec}s`;
+    const canvas=buildShareImage(ts);
 
-  // Try native share API (works on deployed mobile site)
-  if(navigator.share&&navigator.canShare){
-    canvas.toBlob(async blob=>{
-      const file=new File([blob],'fibrin-result.png',{type:'image/png'});
-      if(navigator.canShare({files:[file]})){
+    // iPhone/Android — native share sheet
+    if(navigator.share&&navigator.canShare){
+      canvas.toBlob(async blob=>{
         try{
-          await navigator.share({files:[file],title:`Fibrin #${pz.id}`,text:shareStr});
-          return;
+          const file=new File([blob],'fibrin-result.png',{type:'image/png'});
+          if(navigator.canShare({files:[file]})){
+            await navigator.share({files:[file],title:`Fibrin #${pz.id}`,text:shareStr});
+            return;
+          }
         }catch(e){}
-      }
+        downloadCanvas(canvas);
+      },'image/png');
+    } else {
+      // Desktop — download directly
       downloadCanvas(canvas);
-    },'image/png');
-  } else {
-    // Fallback: open image in new tab (works in Claude sandbox + desktop)
-    const dataUrl=canvas.toDataURL('image/png');
-    const img=new Image();
-    img.src=dataUrl;
-    img.style.cssText='max-width:100%;border-radius:10px;cursor:pointer;';
-    img.title='Right-click → Save image as...';
-
-    // Show below the preview with a save prompt
-    const wrap=document.getElementById('shareImgWrap');
-    const hint=document.createElement('div');
-    hint.style.cssText='text-align:center;font-size:.65rem;color:#b06060;margin-top:.4rem;font-family:JetBrains Mono,monospace;letter-spacing:.05em;';
-    hint.textContent='Right-click the image above → Save image as...';
-    // Remove old hint if any
-    const old=document.getElementById('saveHint');
-    if(old)old.remove();
-    hint.id='saveHint';
-    wrap.parentNode.insertBefore(hint,wrap.nextSibling);
-
-    // Flash the preview
-    wrap.style.outline='2px solid #dc2626';
-    setTimeout(()=>wrap.style.outline='',1200);
-
-    toast('Right-click the image to save!');
+    }
+  }catch(e){
+    console.warn('Share image error:',e);
+    toast('Could not generate image — copying text instead');
+    doCopy();
   }
 }
 
